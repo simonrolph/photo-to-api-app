@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Capture App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f3f4f6;
+        }
+
+        .container {
+            text-align: center;
+            padding: 20px;
+            border-radius: 12px;
+            background: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        video, canvas {
+            max-width: 100%;
+            width: 300px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        #uploadStatus {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Take a Picture</h1>
+        <video id="video" autoplay playsinline></video>
+        <canvas id="canvas" style="display:none;"></canvas>
+        <br>
+        <button id="captureButton">Capture Photo</button>
+        <button id="sendButton" style="display:none;">Send Photo</button>
+        <p id="uploadStatus"></p>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const captureButton = document.getElementById('captureButton');
+        const sendButton = document.getElementById('sendButton');
+        const uploadStatus = document.getElementById('uploadStatus');
+
+        // Access the device camera and stream to the video element
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+            } catch (error) {
+                console.error('Error accessing the camera: ', error);
+                alert('Unable to access camera. Please ensure your device has a camera and permissions are granted.');
+            }
+        }
+
+        startCamera();
+
+        // Capture the photo from the video stream
+        captureButton.addEventListener('click', () => {
+            if (!video.srcObject) {
+                uploadStatus.textContent = 'Camera not active. Please refresh the page and allow camera access.';
+                return;
+            }
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            sendButton.style.display = 'inline';
+            uploadStatus.textContent = 'Photo captured. Ready to send.';
+        });
+
+        // Send the photo to the API
+        sendButton.addEventListener('click', () => {
+            const photo = canvas.toDataURL('image/png'); // Convert canvas to Base64 image
+            const apiUrl = 'https://your-api-endpoint.com/upload'; // Replace with your API endpoint
+
+            uploadStatus.textContent = 'Uploading photo...';
+
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ image: photo }),
+            })
+            .then(response => {
+                if (response.ok) {
+                    uploadStatus.textContent = 'Photo uploaded successfully!';
+                } else {
+                    return response.json().then(err => {
+                        throw new Error(err.message || 'Upload failed');
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error uploading the photo: ', error);
+                uploadStatus.textContent = 'Failed to upload photo. Please try again.';
+            });
+        });
+    </script>
+</body>
+</html>
